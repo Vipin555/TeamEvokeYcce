@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { startStockUpdates } from "./utils";
 
 const app = express();
 app.use(express.json());
@@ -57,10 +58,13 @@ app.use((req, res, next) => {
     }
 
     const PORT = process.env.PORT || 5000;
-    // Fix the type error by providing port as number
     server.listen(Number(PORT), "0.0.0.0", () => {
       log(`Server running at http://0.0.0.0:${PORT}`);
       log('WebSocket server is ready for connections');
+
+      // Start periodic stock updates every 5 seconds
+      startStockUpdates(5000);
+      log('Started periodic stock updates');
     });
   } catch (error) {
     console.error('Failed to start server:', error);
