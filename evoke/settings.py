@@ -63,12 +63,14 @@ WSGI_APPLICATION = 'evoke.wsgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('PGDATABASE'),
-        'USER': os.getenv('PGUSER'),
-        'PASSWORD': os.getenv('PGPASSWORD'),
-        'HOST': os.getenv('PGHOST'),
-        'PORT': os.getenv('PGPORT'),
+        'ENGINE': 'djongo',
+        'NAME': 'evoke_db',
+        'CLIENT': {
+            'host': 'mongodb://localhost:27017/',
+            'port': 27017,
+            'username': '',
+            'password': '',
+        }
     }
 }
 
@@ -83,7 +85,7 @@ REST_FRAMEWORK = {
 }
 
 # CORS settings
-CORS_ALLOW_ALL_ORIGINS = True  # For development only
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 # Password validation

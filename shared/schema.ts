@@ -1,93 +1,69 @@
-import mongoose from 'mongoose';
+import { pgTable, serial, varchar, timestamp, text, decimal, integer } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
-// User Schema
-const userSchema = new mongoose.Schema({
-  username: { 
-    type: String, 
-    required: true,
-    unique: true 
-  },
-  password: { 
-    type: String, 
-    required: true 
-  },
-  createdAt: { 
-    type: Date, 
-    default: Date.now 
-  }
+// Users table
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  username: varchar('username', { length: 255 }).notNull().unique(),
+  password: text('password').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
 
-// Stock Schema
-const stockSchema = new mongoose.Schema({
-  symbol: { 
-    type: String, 
-    required: true,
-    unique: true 
-  },
-  name: { 
-    type: String, 
-    required: true 
-  },
-  currentPrice: { 
-    type: Number, 
-    required: true 
-  },
-  change: { 
-    type: Number, 
-    required: true 
-  },
-  volume: { 
-    type: Number, 
-    required: true 
-  },
-  lastUpdated: { 
-    type: Date, 
-    required: true,
-    default: Date.now 
-  }
+// Stocks table
+export const stocks = pgTable('stocks', {
+  id: serial('id').primaryKey(),
+  symbol: varchar('symbol', { length: 10 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  currentPrice: decimal('current_price', { precision: 10, scale: 2 }).notNull(),
+  change: decimal('change', { precision: 10, scale: 2 }).notNull(),
+  volume: integer('volume').notNull(),
+  lastUpdated: timestamp('last_updated').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
 
-// Watchlist Schema
-const watchlistSchema = new mongoose.Schema({
-  stock: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Stock',
-    required: true 
-  },
-  user: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User',
-    required: true 
-  },
-  addedAt: { 
-    type: Date, 
-    default: Date.now 
-  }
+// Watchlist table
+export const watchlist = pgTable('watchlist', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  stockId: integer('stock_id').notNull().references(() => stocks.id),
+  addedAt: timestamp('added_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
 
-// Create and export models
-export const User = mongoose.model('User', userSchema);
-export const Stock = mongoose.model('Stock', stockSchema);
-export const Watchlist = mongoose.model('Watchlist', watchlistSchema);
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  watchlist: many(watchlist)
+}));
 
-// Type definitions for TypeScript
-export type UserDocument = mongoose.Document & {
-  username: string;
-  password: string;
-  createdAt: Date;
-};
+export const stocksRelations = relations(stocks, ({ many }) => ({
+  watchlist: many(watchlist)
+}));
 
-export type StockDocument = mongoose.Document & {
-  symbol: string;
-  name: string;
-  currentPrice: number;
-  change: number;
-  volume: number;
-  lastUpdated: Date;
-};
+export const watchlistRelations = relations(watchlist, ({ one }) => ({
+  user: one(users, {
+    fields: [watchlist.userId],
+    references: [users.id]
+  }),
+  stock: one(stocks, {
+    fields: [watchlist.stockId],
+    references: [stocks.id]
+  })
+}));
 
-export type WatchlistDocument = mongoose.Document & {
-  stock: mongoose.Types.ObjectId | StockDocument;
-  user: mongoose.Types.ObjectId | UserDocument;
-  addedAt: Date;
-};
+// Zod Schemas for insertions
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertStockSchema = createInsertSchema(stocks).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertWatchlistSchema = createInsertSchema(watchlist).omit({ id: true, createdAt: true, updatedAt: true });
+
+// TypeScript types
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type Stock = typeof stocks.$inferSelect;
+export type InsertStock = z.infer<typeof insertStockSchema>;
+export type Watchlist = typeof watchlist.$inferSelect;
+export type InsertWatchlist = z.infer<typeof insertWatchlistSchema>;
