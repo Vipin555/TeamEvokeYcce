@@ -18,19 +18,16 @@ export default function Dashboard() {
               symbol="NVDA"
               name="Nvidia"
               initialPrice={203.65}
-              initialChange={5.63}
             />
             <StockCard 
               symbol="AAPL"
               name="Apple Inc"
               initialPrice={145.93}
-              initialChange={23.41}
             />
             <StockCard 
               symbol="TSLA"
               name="Tesla Inc"
               initialPrice={177.90}
-              initialChange={17.63}
             />
           </div>
 
