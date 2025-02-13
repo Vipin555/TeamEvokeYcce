@@ -5,64 +5,101 @@ import { storage } from "./storage";
 
 export function registerRoutes(app: Express): Server {
   const httpServer = createServer(app);
-
-  // Create WebSocket server for real-time updates
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   const clients = new Set<WebSocket>();
 
-  // Simulate market updates every 3 seconds
-  setInterval(async () => {
+  // Keep track of current stock values
+  const stockValues = new Map<string, {
+    price: number;
+    change: number;
+    volume: number;
+  }>();
+
+  // Initialize stock data if needed
+  async function initializeStocks() {
     try {
       const stocks = await storage.getAllStocks();
       if (stocks.length === 0) {
-        // Add some initial stock data if none exists
-        await Promise.all([
-          storage.createStock({
+        const initialStocks = [
+          {
             symbol: "AAPL",
             name: "Apple Inc",
             currentPrice: "145.93",
-            change: "23.41",
-            volume: "5265",
-            lastUpdated: new Date(),
-          }),
-          storage.createStock({
+            change: "0.00",
+            volume: "5265"
+          },
+          {
             symbol: "TSLA",
             name: "Tesla Inc",
             currentPrice: "177.90",
-            change: "17.63",
-            volume: "4125",
-            lastUpdated: new Date(),
-          }),
-          storage.createStock({
+            change: "0.00",
+            volume: "4125"
+          },
+          {
             symbol: "NVDA",
             name: "Nvidia",
             currentPrice: "203.65",
-            change: "5.63",
-            volume: "3890",
-            lastUpdated: new Date(),
-          }),
-        ]);
+            change: "0.00",
+            volume: "3890"
+          }
+        ];
+
+        await Promise.all(
+          initialStocks.map(stock => storage.createStock(stock))
+        );
+
+        // Initialize the stock values map
+        initialStocks.forEach(stock => {
+          stockValues.set(stock.symbol, {
+            price: parseFloat(stock.currentPrice),
+            change: 0,
+            volume: parseInt(stock.volume)
+          });
+        });
+      } else {
+        // Load existing values into the map
+        stocks.forEach(stock => {
+          stockValues.set(stock.symbol, {
+            price: parseFloat(stock.currentPrice.toString()),
+            change: parseFloat(stock.change.toString()),
+            volume: parseInt(stock.volume.toString())
+          });
+        });
       }
+    } catch (error) {
+      console.error('Error initializing stocks:', error);
+    }
+  }
 
-      // Update stock prices with random changes
-      stocks.forEach(async (stock) => {
-        const currentPrice = parseFloat(stock.currentPrice.toString());
-        const change = (Math.random() - 0.5) * 5; // Random change between -2.5 and 2.5
-        const newPrice = currentPrice + change;
-        const percentageChange = (change / currentPrice) * 100;
-        const volume = Math.floor(Math.random() * 1000) + 4000;
+  // Update and broadcast stock updates every 3 seconds
+  setInterval(async () => {
+    try {
+      // Generate a single set of updates for all clients
+      stockValues.forEach((value, symbol) => {
+        const change = (Math.random() - 0.5) * 5;
+        const newPrice = value.price + change;
+        const percentageChange = (change / value.price) * 100;
+        const newVolume = Math.floor(Math.random() * 1000) + 4000;
 
-        // Send updates to all connected clients
+        // Update the stored values
+        stockValues.set(symbol, {
+          price: newPrice,
+          change: percentageChange,
+          volume: newVolume
+        });
+
+        // Broadcast the update to all clients
         const updateData = {
-          symbol: stock.symbol,
+          symbol,
           price: newPrice.toFixed(2),
           change: percentageChange.toFixed(2),
-          volume: volume,
+          volume: newVolume
         };
 
-        clients.forEach((client) => {
+        const message = JSON.stringify(updateData);
+        clients.forEach(client => {
           if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(updateData));
+            client.send(message);
           }
         });
       });
@@ -71,10 +108,24 @@ export function registerRoutes(app: Express): Server {
     }
   }, 3000);
 
-  // Handle new WebSocket connections
+  // Initialize stocks when server starts
+  initializeStocks();
+
+  // Handle WebSocket connections
   wss.on('connection', (ws) => {
     clients.add(ws);
     console.log('New client connected');
+
+    // Send current values immediately upon connection
+    stockValues.forEach((value, symbol) => {
+      const currentData = {
+        symbol,
+        price: value.price.toFixed(2),
+        change: value.change.toFixed(2),
+        volume: value.volume
+      };
+      ws.send(JSON.stringify(currentData));
+    });
 
     ws.on('close', () => {
       clients.delete(ws);
