@@ -8,29 +8,29 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
+
       <main className="container mx-auto px-4 py-6">
         <div className="grid gap-6">
           <StockMetrics />
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <StockCard 
               symbol="NVDA"
               name="Nvidia"
-              price={203.65}
-              change={5.63}
+              initialPrice={203.65}
+              initialChange={5.63}
             />
             <StockCard 
               symbol="AAPL"
               name="Apple Inc"
-              price={145.93}
-              change={23.41}
+              initialPrice={145.93}
+              initialChange={23.41}
             />
             <StockCard 
               symbol="TSLA"
               name="Tesla Inc"
-              price={177.90}
-              change={17.63}
+              initialPrice={177.90}
+              initialChange={17.63}
             />
           </div>
 

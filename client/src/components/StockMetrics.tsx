@@ -1,7 +1,41 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { useEffect, useState } from "react";
 
 export default function StockMetrics() {
+  const { marketUpdates } = useWebSocket();
+  const [metrics, setMetrics] = useState({
+    price: 18669,
+    volume: 5265,
+    change: -0.7
+  });
+
+  useEffect(() => {
+    if (marketUpdates.size > 0) {
+      // Calculate average metrics from all stocks
+      let totalPrice = 0;
+      let totalVolume = 0;
+      let totalChange = 0;
+
+      marketUpdates.forEach((update) => {
+        totalPrice += parseFloat(update.price);
+        totalVolume += update.volume;
+        totalChange += parseFloat(update.change);
+      });
+
+      const avgPrice = totalPrice / marketUpdates.size;
+      const avgVolume = totalVolume / marketUpdates.size;
+      const avgChange = totalChange / marketUpdates.size;
+
+      setMetrics({
+        price: avgPrice,
+        volume: avgVolume,
+        change: avgChange
+      });
+    }
+  }, [marketUpdates]);
+
   const currentTime = new Date().toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
@@ -22,12 +56,10 @@ export default function StockMetrics() {
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-2">
-              <p className="text-sm text-gray-500">Price</p>
+              <p className="text-sm text-gray-500">Average Price</p>
               <div className="flex items-center gap-2">
-                <span className="text-3xl font-bold">18669</span>
-                <span className="text-green-500 flex items-center">
-                  <ArrowUpIcon className="h-4 w-4" />
-                  1.2%
+                <span className="text-3xl font-bold">
+                  ${metrics.price.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -37,12 +69,10 @@ export default function StockMetrics() {
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-2">
-              <p className="text-sm text-gray-500">Volume</p>
+              <p className="text-sm text-gray-500">Average Volume</p>
               <div className="flex items-center gap-2">
-                <span className="text-3xl font-bold">5265</span>
-                <span className="text-red-500 flex items-center">
-                  <ArrowDownIcon className="h-4 w-4" />
-                  0.5%
+                <span className="text-3xl font-bold">
+                  {Math.round(metrics.volume)}
                 </span>
               </div>
             </div>
@@ -52,13 +82,20 @@ export default function StockMetrics() {
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-2">
-              <p className="text-sm text-gray-500">Change</p>
+              <p className="text-sm text-gray-500">Average Change</p>
               <div className="flex items-center gap-2">
-                <span className="text-3xl font-bold">18669</span>
-                <span className="text-red-500 flex items-center">
-                  <ArrowDownIcon className="h-4 w-4" />
-                  0.7%
+                <span className="text-3xl font-bold">
+                  {metrics.change.toFixed(2)}%
                 </span>
+                {metrics.change >= 0 ? (
+                  <span className="text-green-500 flex items-center">
+                    <ArrowUpIcon className="h-4 w-4" />
+                  </span>
+                ) : (
+                  <span className="text-red-500 flex items-center">
+                    <ArrowDownIcon className="h-4 w-4" />
+                  </span>
+                )}
               </div>
             </div>
           </CardContent>
