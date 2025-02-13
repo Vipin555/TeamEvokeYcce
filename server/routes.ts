@@ -109,7 +109,7 @@ export function registerRoutes(app: Express): Server {
   }, 3000);
 
   // Initialize stocks when server starts
-  initializeStocks();
+  initializeStocks().catch(console.error);
 
   // Handle WebSocket connections
   wss.on('connection', (ws) => {
